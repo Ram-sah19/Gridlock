@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASTraM-Intel: BTP Smart Patrol Dispatch Dashboard</title>
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Custom Style (Vanilla CSS with Premium Dark Theme & Glassmorphism) -->
+    <style>
+        :root {
+            --bg-primary: #080C14;
+            --bg-secondary: #0E1624;
+            --bg-glass: rgba(14, 22, 36, 0.7);
+            --border-glass: rgba(255, 255, 255, 0.07);
+            --text-primary: #F3F4F6;
+            --text-muted: #9CA3AF;
+            --accent-red: #FF3B30;
+            --accent-orange: #FF9500;
+            --accent-blue: #007AFF;
+            --accent-green: #34C759;
+            --glow-red: rgba(255, 59, 48, 0.25);
+            --glow-orange: rgba(255, 149, 0, 0.25);
+            --glow-blue: rgba(0, 122, 255, 0.25);
+            --glow-green: rgba(52, 199, 89, 0.2);
+            --font-main: 'Inter', sans-serif;
+            --font-title: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Header Styling */
+        header {
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-glass);
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .header-title-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .header-logo {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, #007AFF, #FF3B30);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: #fff;
+            box-shadow: 0 0 15px rgba(0, 122, 255, 0.4);
+            font-weight: 700;
+            font-family: var(--font-title);
+        }
+
+        .header-title {
+            font-family: var(--font-title);
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin: 0;
+            font-size: 1.15rem;
+        }
+
+        .header-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .system-status {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            font-size: 0.85rem;
+        }
+
+        .status-pill {
+            background-color: rgba(52, 199, 89, 0.1);
+            border: 1px solid rgba(52, 199, 89, 0.2);
+            color: var(--accent-green);
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-weight: 600;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-green);
+            border-radius: 50%;
+            display: inline-block;
+            animation: statusPulse 1.5s infinite alternate;
+        }
+
+        @keyframes statusPulse {
+            0% { transform: scale(0.85); box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.7); }
+            100% { transform: scale(1.15); box-shadow: 0 0 8px 3px rgba(52, 199, 89, 0.4); }
+        }
+
+        /* Main Layout */
+        .dashboard-container {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 65px);
+            position: relative;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: 400px;
+            background-color: var(--bg-secondary);
+            border-right: 1px solid var(--border-glass);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            z-index: 999;
+            box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-header {
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--border-glass);
+        }
+
+        .sidebar-title {
+            font-family: var(--font-title);
+            font-weight: 600;
+            font-size: 1rem;
+            margin: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar-scrollable {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        /* Map and Main View */
+        .main-view {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            flex: 1;
+            background-color: #0d1117;
+        }
+
+        /* Stats Bar Overlay */
+        .stats-overlay {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            display: flex;
+            gap: 10px;
+            z-index: 998;
+            pointer-events: none;
+        }
+
+        .stat-card {
+            flex: 1;
+            background: var(--bg-glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glass);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            pointer-events: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .stat-icon.red { background-color: rgba(255, 59, 48, 0.1); color: var(--accent-red); }
+        .stat-icon.orange { background-color: rgba(255, 149, 0, 0.1); color: var(--accent-orange); }
+        .stat-icon.blue { background-color: rgba(0, 122, 255, 0.1); color: var(--accent-blue); }
+        .stat-icon.green { background-color: rgba(52, 199, 89, 0.1); color: var(--accent-green); }
+
+        .stat-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            font-family: var(--font-title);
+            line-height: 1.2;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Filter Panel Overlay (Top Right of Map) */
+        .filter-overlay {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 998;
+            background: var(--bg-glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glass);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            display: flex;
+            gap: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            align-items: center;
+        }
+
+        .filter-select {
+            background-color: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-glass);
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .filter-select:focus {
+            border-color: var(--accent-blue);
+        }
+
+        /* Cards/Panels inside Sidebar */
+        .sidebar-card {
+            background-color: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-glass);
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .card-title-sm {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Active Hotspots list */
+        .hotspot-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 280px;
+            overflow-y: auto;
+            padding-right: 2px;
+        }
+
+        .hotspot-item {
+            background-color: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-glass);
+            border-radius: 6px;
+            padding: 0.65rem 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 3px solid transparent;
+        }
+
+        .hotspot-item:hover {
+            background-color: rgba(255, 255, 255, 0.06);
+            transform: translateX(2px);
+        }
+
+        .hotspot-item.active {
+            background-color: rgba(0, 122, 255, 0.08);
+            border-color: rgba(0, 122, 255, 0.3);
+            border-left-color: var(--accent-blue);
+        }
+
+        .hotspot-item.priority-High { border-left-color: var(--accent-red); }
+        .hotspot-item.priority-Medium { border-left-color: var(--accent-orange); }
+        .hotspot-item.priority-Low { border-left-color: var(--accent-blue); }
+
+        .hotspot-item.enforcing {
+            border-left-color: var(--accent-green) !important;
+            background-color: rgba(52, 199, 89, 0.05);
+            animation: enforcingPulse 2s infinite alternate;
+        }
+
+        @keyframes enforcingPulse {
+            0% { border-color: rgba(52, 199, 89, 0.2); }
+            100% { border-color: rgba(52, 199, 89, 0.5); }
+        }
+
+        .hotspot-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            max-width: 70%;
+        }
+
+        .hotspot-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .hotspot-meta {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .hotspot-pci-badge {
+            font-family: var(--font-title);
+            font-weight: 700;
+            font-size: 0.8rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            text-align: center;
+            min-width: 50px;
+        }
+
+        .hotspot-pci-badge.High { background-color: rgba(255, 59, 48, 0.15); color: var(--accent-red); border: 1px solid rgba(255, 59, 48, 0.2); }
+        .hotspot-pci-badge.Medium { background-color: rgba(255, 149, 0, 0.15); color: var(--accent-orange); border: 1px solid rgba(255, 149, 0, 0.2); }
+        .hotspot-pci-badge.Low { background-color: rgba(0, 122, 255, 0.15); color: var(--accent-blue); border: 1px solid rgba(0, 122, 255, 0.2); }
+        .hotspot-pci-badge.enforcing { background-color: rgba(52, 199, 89, 0.15); color: var(--accent-green); border: 1px solid rgba(52, 199, 89, 0.2); }
+
+        /* Vehicle Analytics Chart Container */
+        .chart-container {
+            position: relative;
+            height: 120px;
+            width: 100%;
+        }
+
+        /* Live Alert Feed */
+        .alert-feed {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .alert-item {
+            background-color: rgba(255, 255, 255, 0.01);
+            border-left: 3px solid var(--accent-orange);
+            border-radius: 4px;
+            padding: 0.5rem;
+            font-size: 0.75rem;
+            animation: slideIn 0.3s ease-out;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .alert-item.alert-danger { border-left-color: var(--accent-red); background-color: rgba(255, 59, 48, 0.02); }
+        .alert-item.alert-warning { border-left-color: var(--accent-orange); background-color: rgba(255, 149, 0, 0.02); }
+        .alert-item.alert-info { border-left-color: var(--accent-blue); background-color: rgba(0, 122, 255, 0.02); }
+        .alert-item.alert-success { border-left-color: var(--accent-green); background-color: rgba(52, 199, 89, 0.02); }
+
+        .alert-time {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Leaflet Marker Styling */
+        .leaflet-div-icon {
+            background: transparent;
+            border: none;
+        }
+
+        .custom-glow-marker {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        .custom-glow-marker::after {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: -6px;
+            right: -6px;
+            bottom: -6px;
+            border-radius: 50%;
+            animation: markerPulse 1.8s infinite;
+        }
+
+        .marker-red { background-color: var(--accent-red); }
+        .marker-red::after { border: 2px solid var(--accent-red); }
+
+        .marker-orange { background-color: var(--accent-orange); }
+        .marker-orange::after { border: 2px solid var(--accent-orange); }
+
+        .marker-blue { background-color: var(--accent-blue); }
+        .marker-blue::after { border: 2px solid var(--accent-blue); }
+
+        .marker-green { background-color: var(--accent-green); }
+        .marker-green::after { border: 2px solid var(--accent-green); }
+
+        @keyframes markerPulse {
+            0% { transform: scale(0.6); opacity: 1; }
+            100% { transform: scale(1.6); opacity: 0; }
+        }
+
+        /* Police Dispatch Button & Panel */
+        .dispatch-btn {
+            background: linear-gradient(135deg, var(--accent-blue), #0051C3);
+            border: none;
+            color: #fff;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0, 122, 255, 0.3);
+        }
+
+        .dispatch-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(0, 122, 255, 0.45);
+        }
+
+        .dispatch-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .dispatch-btn:disabled {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            box-shadow: none;
+            cursor: not-allowed;
+            border: 1px solid var(--border-glass);
+        }
+
+        .dispatch-btn.cancel {
+            background: linear-gradient(135deg, var(--accent-red), #9C0F0F);
+            box-shadow: 0 4px 15px rgba(255, 59, 48, 0.3);
+        }
+
+        /* Details Overlay (Bottom Left of Map) */
+        .details-overlay {
+            position: absolute;
+            bottom: 25px;
+            left: 15px;
+            z-index: 998;
+            background: var(--bg-glass);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--border-glass);
+            border-radius: 8px;
+            padding: 1.25rem;
+            width: 320px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .detail-title {
+            font-family: var(--font-title);
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin: 0;
+            max-width: 80%;
+        }
+
+        .detail-close-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0;
+            font-size: 1rem;
+        }
+
+        .detail-close-btn:hover { color: #fff; }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            padding-bottom: 6px;
+            margin-bottom: 4px;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            color: var(--text-muted);
+        }
+
+        .detail-value {
+            font-weight: 500;
+        }
+
+        /* Dispatch Progress bar in detail panel */
+        .dispatch-progress-container {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 5px;
+            font-size: 0.75rem;
+        }
+
+        .progress-bar-bg {
+            height: 6px;
+            background-color: rgba(255, 255, 255, 0.08);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-green));
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        /* Simulation Controls overlay (Bottom Right of Map) */
+        .simulation-overlay {
+            position: absolute;
+            bottom: 25px;
+            right: 15px;
+            z-index: 998;
+            background: var(--bg-glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glass);
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 0.8rem;
+        }
+
+        .sim-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-blue);
+            border-radius: 50%;
+            display: inline-block;
+            animation: simPulse 1s infinite alternate;
+        }
+
+        @keyframes simPulse {
+            0% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navigation Bar -->
+    <header>
+        <div class="header-title-container">
+            <div class="header-logo">BTP</div>
+            <div>
+                <h1 class="header-title">BENGALURU TRAFFIC POLICE</h1>
+                <p class="header-subtitle">ASTraM-Intel • Parking Congestion Dispatch System</p>
+            </div>
+        </div>
+        <div class="system-status">
+            <span id="live-time" class="font-monospace text-light opacity-75">19:34:00 | 21 JUN 2026</span>
+            <div class="status-pill">
+                <span class="pulse-dot"></span>
+                <span>SYSTEM LIVE</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Dashboard Main Area -->
+    <div class="dashboard-container">
+        
+        <!-- Sidebar Panel -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2 class="sidebar-title">
+                    <span><i class="fa-solid fa-gauge-high me-2 text-primary"></i>Analytics & Incidents</span>
+                    <button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.75rem;" onclick="resetSimulation()"><i class="fa-solid fa-arrow-rotate-left"></i> Reset</button>
+                </h2>
+            </div>
+            
+            <div class="sidebar-scrollable">
+                
+                <!-- Vehicle Distribution Chart -->
+                <div class="sidebar-card">
+                    <h3 class="card-title-sm">
+                        <span><i class="fa-solid fa-car-side me-1"></i> Offending Vehicle Types</span>
+                        <span id="chart-total-count" class="badge bg-secondary">Total: 248.5k</span>
+                    </h3>
+                    <div class="chart-container">
+                        <canvas id="vehicleChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Prioritized Hotspots List -->
+                <div class="sidebar-card">
+                    <h3 class="card-title-sm">
+                        <span><i class="fa-solid fa-list-ol me-1"></i> Prioritized Dispatch Sites</span>
+                        <span id="active-hotspots-count" class="badge bg-danger">17 Active</span>
+                    </h3>
+                    <div class="hotspot-list" id="hotspot-list-container">
+                        <!-- Hotspots dynamically loaded -->
+                    </div>
+                </div>
+                
+                <!-- Live Incident Alerts Feed -->
+                <div class="sidebar-card">
+                    <h3 class="card-title-sm">
+                        <span><i class="fa-solid fa-bell me-1"></i> Real-Time Dispatch Log</span>
+                        <span class="pulse-dot" style="background-color: var(--accent-orange); animation-name: statusPulse;"></span>
+                    </h3>
+                    <div class="alert-feed" id="alert-feed-container">
+                        <!-- Live alerts dynamically pushed -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main View (Map area) -->
+        <div class="main-view">
+            
+            <!-- Statistics Bar overlay -->
+            <div class="stats-overlay">
+                <div class="stat-card">
+                    <div class="stat-icon red"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="stat-info">
+                        <span id="stat-active-incidents" class="stat-value">17</span>
+                        <span class="stat-label">Active Hotspots</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange"><i class="fa-solid fa-road-barrier"></i></div>
+                    <div class="stat-info">
+                        <span id="stat-total-pci" class="stat-value">449.6k</span>
+                        <span class="stat-label">Cumulative PCI</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon blue"><i class="fa-solid fa-truck-monster"></i></div>
+                    <div class="stat-info">
+                        <span id="stat-active-wardens" class="stat-value">8 / 12</span>
+                        <span class="stat-label font-monospace">Wardens Active</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                    <div class="stat-info">
+                        <span id="stat-avg-response" class="stat-value">6.8m</span>
+                        <span class="stat-label">Avg Clear Time</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters Bar Overlay -->
+            <div class="filter-overlay">
+                <span class="text-muted" style="font-size: 0.75rem;"><i class="fa-solid fa-filter me-1"></i> Filter:</span>
+                <select class="filter-select" id="filter-jurisdiction" onchange="applyFilters()">
+                    <option value="All">All Jurisdictions</option>
+                    <option value="Upparpet">Upparpet</option>
+                    <option value="Shivajinagar">Shivajinagar</option>
+                    <option value="Malleshwaram">Malleshwaram</option>
+                    <option value="HAL Old Airport">HAL Old Airport</option>
+                    <option value="Rajajinagar">Rajajinagar</option>
+                    <option value="Vijayanagara">Vijayanagara</option>
+                    <option value="Jayanagara">Jayanagara</option>
+                    <option value="Kodigehalli">Kodigehalli</option>
+                </select>
+                
+                <select class="filter-select" id="filter-priority" onchange="applyFilters()">
+                    <option value="All">All Priorities</option>
+                    <option value="High Priority">High</option>
+                    <option value="Medium Priority">Medium</option>
+                    <option value="Low Priority">Low</option>
+                </select>
+            </div>
+
+            <!-- Leaflet Map Container -->
+            <div id="map"></div>
+
+            <!-- Hotspot Details Panel Overlay -->
+            <div class="details-overlay" id="details-panel">
+                <!-- Content loaded dynamically -->
+            </div>
+
+            <!-- Simulation indicator -->
+            <div class="simulation-overlay">
+                <span class="sim-dot"></span>
+                <span>Active Dispatch Simulation Loop (10s intervals)</span>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Bootstrap & ChartJS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Custom App Logic -->
+    <script>
+        // Real-world-derived top hotspot data from DBSCAN analysis (17 key locations)
+        let hotspots = [
+            { id: 1, name: "Majestic Metro Station", jurisdiction: "Upparpet", lat: 12.9756, lon: 77.5728, violations: 51373, pci: 164709.5, priority: "High Priority", vehicle: "SCOOTER", violation_type: "WRONG PARKING", status: "Active" },
+            { id: 2, name: "Shivajinagar Bus Station", jurisdiction: "Shivajinagar", lat: 12.9857, lon: 77.5960, violations: 20046, pci: 51232.6, priority: "High Priority", vehicle: "CAR", violation_type: "NO PARKING", status: "Active" },
+            { id: 3, name: "Rajajinagar Commercial Hub", jurisdiction: "Rajajinagar", lat: 12.9902, lon: 77.5540, violations: 12417, pci: 34453.8, priority: "High Priority", vehicle: "SCOOTER", violation_type: "WRONG PARKING", status: "Active" },
+            { id: 4, name: "Malleshwaram 15th Cross", jurisdiction: "Malleshwaram", lat: 12.9966, lon: 77.5712, violations: 8845, pci: 21943.7, priority: "High Priority", vehicle: "SCOOTER", violation_type: "NO PARKING", status: "Active" },
+            { id: 5, name: "Malleshwaram Metro Junction", jurisdiction: "Malleshwaram", lat: 12.9913, lon: 77.5712, violations: 8761, pci: 18089.2, priority: "High Priority", vehicle: "CAR", violation_type: "WRONG PARKING", status: "Active" },
+            { id: 6, name: "HAL Airport Rd (New Horizon)", jurisdiction: "HAL Old Airport", lat: 12.9610, lon: 77.6418, violations: 8608, pci: 11771.3, priority: "High Priority", vehicle: "CAR", violation_type: "PARKING IN A MAIN ROAD", status: "Active" },
+            { id: 7, name: "Vijayanagara Metro corridor", jurisdiction: "Vijayanagara", lat: 12.9687, lon: 77.5369, violations: 6865, pci: 11620.1, priority: "High Priority", vehicle: "SCOOTER", violation_type: "WRONG PARKING", status: "Active" },
+            { id: 8, name: "Chikkajala Highway Turn", jurisdiction: "Chikkajala", lat: 13.1845, lon: 77.6797, violations: 4045, pci: 10840.8, priority: "High Priority", vehicle: "PASSENGER AUTO", violation_type: "NO PARKING", status: "Active" },
+            { id: 9, name: "Embassy Tech Village Road", jurisdiction: "HAL Old Airport", lat: 12.9365, lon: 77.6923, violations: 3585, pci: 10015.0, priority: "High Priority", vehicle: "CAR", violation_type: "WRONG PARKING", status: "Active" },
+            { id: 10, name: "KR Puram Devasandra Jnc", jurisdiction: "K.R. Pura", lat: 12.9958, lon: 77.7178, violations: 3503, pci: 9530.8, priority: "High Priority", vehicle: "CAR", violation_type: "NO PARKING", status: "Active" },
+            { id: 11, name: "Kodigehalli Signal Crossing", jurisdiction: "Kodigehalli", lat: 13.0715, lon: 77.5919, violations: 5156, pci: 6116.1, priority: "High Priority", vehicle: "PASSENGER AUTO", violation_type: "WRONG PARKING", status: "Active" },
+            { id: 12, name: "Jayanagara Shopping Complex", jurisdiction: "Jayanagara", lat: 12.9421, lon: 77.5905, violations: 1956, pci: 5207.0, priority: "High Priority", vehicle: "SCOOTER", violation_type: "PARKING ON FOOTPATH", status: "Active" },
+            { id: 13, name: "Mahadevapura Outer Ring Rd", jurisdiction: "Mahadevapura", lat: 12.9866, lon: 77.6798, violations: 1543, pci: 5090.6, priority: "High Priority", vehicle: "CAR", violation_type: "NO PARKING", status: "Active" },
+            { id: 14, name: "Basavanagudi Gandhi Bazaar", jurisdiction: "Basavanagudi", lat: 12.9421, lon: 77.5754, violations: 2083, pci: 4790.4, priority: "High Priority", vehicle: "CAR", violation_type: "WRONG PARKING", status: "Active" },
+            { id: 15, name: "Koramangala 80ft Road", jurisdiction: "Koramangala", lat: 12.9352, lon: 77.6244, violations: 1850, pci: 4120.0, priority: "Medium Priority", vehicle: "CAR", violation_type: "WRONG PARKING", status: "Active" },
+            { id: 16, name: "Whitefield IT Corridor", jurisdiction: "Whitefield", lat: 12.9698, lon: 77.7500, violations: 1240, pci: 3250.0, priority: "Medium Priority", vehicle: "CAR", violation_type: "WRONG PARKING", status: "Active" },
+            { id: 17, name: "Electronic City Expressway Entry", jurisdiction: "Electronic City", lat: 12.8452, lon: 77.6602, violations: 980, pci: 2120.0, priority: "Low Priority", vehicle: "CAR", violation_type: "NO PARKING", status: "Active" }
+        ];
+
+        // Global variables for dashboard status
+        let map;
+        let vehicleChart;
+        let markers = {};
+        let activeRoute = null;
+        let patrolMarker = null;
+        let selectedHotspot = null;
+        let dispatchingActive = false;
+        let dispatchInterval = null;
+
+        // BTP Station coordinates (origin of dispatches)
+        const BTP_HEADQUARTERS = [12.9785, 77.5920];
+
+        // Initialize dashboard on load
+        window.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            initChart();
+            renderHotspotList(hotspots);
+            initAlertFeed();
+            updateLiveTime();
+            updateStats();
+            setInterval(updateLiveTime, 1000);
+            
+            // Random simulated alerts log loop
+            setInterval(generateRandomAlert, 12000);
+        });
+
+        // 1. Initialize Map (Leaflet with CartoDB Dark Matter)
+        function initMap() {
+            map = L.map('map', {
+                zoomControl: true,
+                attributionControl: false
+            }).setView([12.977291, 77.5840233], 12);
+
+            // Dark Mode Tile Layer
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 20
+            }).addTo(map);
+
+            // Add HQ marker
+            L.circleMarker(BTP_HEADQUARTERS, {
+                radius: 6,
+                color: '#fff',
+                fillColor: '#007AFF',
+                fillOpacity: 1,
+                weight: 2
+            }).bindPopup("<b>BTP Central Dispatch Command</b><br>Active Patrol Vehicles: 12").addTo(map);
+
+            // Draw hotspot circles
+            renderMapMarkers(hotspots);
+        }
+
+        // Render circles and markers on Leaflet
+        function renderMapMarkers(data) {
+            // Clear existing markers
+            for (let key in markers) {
+                map.removeLayer(markers[key]);
+            }
+            markers = {};
+
+            data.forEach(h => {
+                let priorityClass = h.priority.replace(" ", "-");
+                let colorClass = h.status === 'Enforcing' ? 'marker-green' : 
+                                 (h.priority === 'High Priority' ? 'marker-red' : 
+                                 (h.priority === 'Medium Priority' ? 'marker-orange' : 'marker-blue'));
+                
+                let strokeColor = h.status === 'Enforcing' ? '#34C759' : 
+                                  (h.priority === 'High Priority' ? '#FF3B30' : 
+                                  (h.priority === 'Medium Priority' ? '#FF9500' : '#007AFF'));
+
+                // HTML DivIcon for custom marker (to support glowing CSS pulses)
+                let customIcon = L.divIcon({
+                    className: 'leaflet-div-icon',
+                    html: `<div class="custom-glow-marker ${colorClass}"></div>`,
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                });
+
+                // Marker Group combining Circle Zone and Central Glow Dot
+                let markerGroup = L.layerGroup();
+
+                // 100-meter physical boundary representation
+                let circle = L.circle([h.lat, h.lon], {
+                    radius: 100,
+                    color: strokeColor,
+                    fillColor: strokeColor,
+                    fillOpacity: 0.25,
+                    weight: 1.5
+                }).addTo(markerGroup);
+
+                let glowDot = L.marker([h.lat, h.lon], { icon: customIcon }).addTo(markerGroup);
+                
+                // Add click handler
+                glowDot.on('click', () => {
+                    selectHotspot(h.id);
+                });
+                circle.on('click', () => {
+                    selectHotspot(h.id);
+                });
+
+                markerGroup.addTo(map);
+                markers[h.id] = markerGroup;
+            });
+        }
+
+        // 2. Initialize Chart.js (Vehicle Types Analytics)
+        function initChart() {
+            const ctx = document.getElementById('vehicleChart').getContext('2d');
+            vehicleChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Scooter', 'Car', 'Auto', 'Truck', 'Bus'],
+                    datasets: [{
+                        label: 'Incidents',
+                        data: [485, 310, 165, 72, 41],
+                        backgroundColor: [
+                            'rgba(255, 59, 48, 0.85)',
+                            'rgba(255, 149, 0, 0.85)',
+                            'rgba(0, 122, 255, 0.85)',
+                            'rgba(52, 199, 89, 0.85)',
+                            'rgba(175, 82, 222, 0.85)'
+                        ],
+                        borderColor: [
+                            '#FF3B30', '#FF9500', '#007AFF', '#34C759', '#AF52DE'
+                        ],
+                        borderWidth: 1.5,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#9CA3AF', font: { size: 9 } }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#9CA3AF', font: { size: 9 }, stepSize: 150 }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 3. Render Hotspot List on Sidebar
+        function renderHotspotList(data) {
+            const container = document.getElementById('hotspot-list-container');
+            container.innerHTML = '';
+            
+            data.forEach(h => {
+                let badgeClass = h.status === 'Enforcing' ? 'enforcing' : h.priority.split(' ')[0];
+                let badgeText = h.status === 'Enforcing' ? 'Enforcing' : `${h.pci.toLocaleString(undefined, {maximumFractionDigits: 1})} PCI`;
+                let enforcingClass = h.status === 'Enforcing' ? 'enforcing' : '';
+
+                let itemHtml = `
+                    <div class="hotspot-item priority-${h.priority.split(' ')[0]} ${enforcingClass}" 
+                         id="hs-item-${h.id}" 
+                         onclick="selectHotspot(${h.id})">
+                        <div class="hotspot-info">
+                            <span class="hotspot-name">${h.name}</span>
+                            <span class="hotspot-meta">
+                                <span><i class="fa-solid fa-shield-halved me-1"></i>${h.jurisdiction}</span>
+                                <span><i class="fa-solid fa-car-rear me-1"></i>${h.violations.toLocaleString()} cases</span>
+                            </span>
+                        </div>
+                        <div class="hotspot-pci-badge ${badgeClass}" id="hs-badge-${h.id}">
+                            ${badgeText}
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', itemHtml);
+            });
+
+            document.getElementById('active-hotspots-count').innerText = `${data.filter(h => h.status !== 'Resolved').length} Active`;
+        }
+
+        // 4. Initial Alert Feed
+        function initAlertFeed() {
+            const feed = document.getElementById('alert-feed-container');
+            feed.innerHTML = '';
+            const initialAlerts = [
+                { type: 'danger', time: '19:33:14', text: 'MAJOR CONGESTION: Wrong parking detected near Majestic Metro Station by camera C-24.' },
+                { type: 'warning', time: '19:32:51', text: 'DISPATCH: Patrol Unit 08 responding to Shivajinagar Bus Station hotspot.' },
+                { type: 'success', time: '19:25:40', text: 'RESOLVED: Wrong parking cleared at Koramangala 80ft Road. PCI decreased by 4.2.' }
+            ];
+            
+            initialAlerts.forEach(a => {
+                pushAlert(a.type, a.time, a.text);
+            });
+        }
+
+        function pushAlert(type, time, text) {
+            const feed = document.getElementById('alert-feed-container');
+            const alertHtml = `
+                <div class="alert-item alert-${type}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="alert-time"><i class="fa-solid fa-clock me-1"></i>${time}</span>
+                    </div>
+                    <div>${text}</div>
+                </div>
+            `;
+            feed.insertAdjacentHTML('afterbegin', alertHtml);
+            // Limit alert lists to 15 items
+            if(feed.children.length > 15) {
+                feed.removeChild(feed.lastChild);
+            }
+        }
+
+        function generateRandomAlert() {
+            const types = ['danger', 'warning', 'info'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            const time = getFormattedTime();
+            
+            const randomHotspot = hotspots[Math.floor(Math.random() * hotspots.length)];
+            let text = "";
+
+            if (type === 'danger') {
+                text = `CONGESTION SPIKE: Illegal parking of ${randomHotspot.vehicle}s reported at ${randomHotspot.name} in ${randomHotspot.jurisdiction}.`;
+            } else if (type === 'warning') {
+                text = `Patrol alert: Warden unit requested at ${randomHotspot.name} due to high local turnover.`;
+            } else {
+                text = `System validation: Hotspot index updated for ${randomHotspot.name}. Current PCI: ${randomHotspot.pci.toFixed(1)}.`;
+            }
+            pushAlert(type, time, text);
+        }
+
+        // Helper time functions
+        function getFormattedTime() {
+            const now = new Date();
+            return now.toTimeString().split(' ')[0];
+        }
+
+        function updateLiveTime() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+            const timeStr = now.toTimeString().split(' ')[0];
+            document.getElementById('live-time').innerText = `${timeStr} | ${dateStr}`;
+        }
+
+        // Update stats summary bar
+        function updateStats() {
+            let active = hotspots.filter(h => h.status !== 'Resolved').length;
+            let sumPci = hotspots.reduce((acc, curr) => acc + (curr.status !== 'Resolved' ? curr.pci : 0), 0);
+            
+            document.getElementById('stat-active-incidents').innerText = active;
+            document.getElementById('stat-total-pci').innerText = (sumPci/1000).toFixed(1) + "k";
+            document.getElementById('stat-active-incidents').innerText = active;
+        }
+
+        // Apply jurisdiction and priority filters
+        function applyFilters() {
+            const jurFilter = document.getElementById('filter-jurisdiction').value;
+            const priFilter = document.getElementById('filter-priority').value;
+
+            let filtered = hotspots.filter(h => {
+                let jurMatch = jurFilter === 'All' || h.jurisdiction === jurFilter;
+                let priMatch = priFilter === 'All' || h.priority === priFilter;
+                return jurMatch && priMatch;
+            });
+
+            renderHotspotList(filtered);
+            renderMapMarkers(filtered);
+            
+            // Auto fit map bounds if filters applied
+            if (filtered.length > 0) {
+                let group = new L.featureGroup(filtered.map(f => L.marker([f.lat, f.lon])));
+                map.fitBounds(group.getBounds().pad(0.15));
+            }
+        }
+
+        // Select a hotspot (updates sidebar class, map center, details card)
+        function selectHotspot(id) {
+            // Remove active class from previous list items
+            document.querySelectorAll('.hotspot-item').forEach(item => item.classList.remove('active'));
+            
+            selectedHotspot = hotspots.find(h => h.id === id);
+            if (!selectedHotspot) return;
+
+            const listItem = document.getElementById(`hs-item-${id}`);
+            if (listItem) {
+                listItem.classList.add('active');
+                listItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            // Pan and Zoom map
+            map.setView([selectedHotspot.lat, selectedHotspot.lon], 15);
+
+            // Populate details overlay panel
+            const panel = document.getElementById('details-panel');
+            panel.style.display = 'flex';
+            
+            let btnLabel = selectedHotspot.status === 'Enforcing' ? 'Warden Onsite' : 'Dispatch Patrol Unit';
+            let btnDisabled = selectedHotspot.status === 'Enforcing' ? 'disabled' : '';
+            let btnClass = selectedHotspot.status === 'Enforcing' ? 'btn-success' : '';
+            
+            panel.innerHTML = `
+                <div class="detail-header">
+                    <h4 class="detail-title">${selectedHotspot.name}</h4>
+                    <button class="detail-close-btn" onclick="closeDetailsPanel()"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div>
+                    <div class="detail-row">
+                        <span class="detail-label">Police Station:</span>
+                        <span class="detail-value">${selectedHotspot.jurisdiction}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Enforcement Severity:</span>
+                        <span class="detail-value text-danger font-monospace fw-bold">${selectedHotspot.priority}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Traffic Impact (PCI):</span>
+                        <span class="detail-value font-monospace fw-bold text-warning">${selectedHotspot.pci.toFixed(1)}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Total Violations Logged:</span>
+                        <span class="detail-value">${selectedHotspot.violations.toLocaleString()}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Dominant Vehicle Type:</span>
+                        <span class="detail-value">${selectedHotspot.vehicle}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Primary Violation:</span>
+                        <span class="detail-value" style="font-size:0.75rem;">${selectedHotspot.violation_type}</span>
+                    </div>
+                </div>
+                
+                <div id="dispatch-action-area" class="mt-2">
+                    <button class="dispatch-btn w-100 ${btnClass}" id="dispatch-btn-${selectedHotspot.id}" onclick="dispatchPatrol(${selectedHotspot.id})" ${btnDisabled}>
+                        <i class="fa-solid fa-taxi"></i> ${btnLabel}
+                    </button>
+                </div>
+            `;
+        }
+
+        function closeDetailsPanel() {
+            document.getElementById('details-panel').style.display = 'none';
+            document.querySelectorAll('.hotspot-item').forEach(item => item.classList.remove('active'));
+            selectedHotspot = null;
+        }
+
+        // 5. Patrol Dispatch Simulator
+        function dispatchPatrol(id) {
+            const h = hotspots.find(hs => hs.id === id);
+            if (!h || h.status === 'Enforcing') return;
+
+            // Mark as Enforcing
+            h.status = 'Enforcing';
+            dispatchingActive = true;
+
+            // Add active patrol count
+            document.getElementById('stat-active-wardens').innerText = "9 / 12";
+
+            // Update UI list and panel
+            renderHotspotList(hotspots);
+            renderMapMarkers(hotspots);
+            
+            // Re-select to update details box state
+            selectHotspot(h.id);
+
+            // Log dispatch alert
+            pushAlert('warning', getFormattedTime(), `PATROL DISPATCHED: Warden Unit 04 dispatched from HQ to ${h.name}.`);
+
+            // Generate Routing Path on Map from Central HQ to Hotspot
+            let routeCoords = [
+                BTP_HEADQUARTERS,
+                [BTP_HEADQUARTERS[0] + (h.lat - BTP_HEADQUARTERS[0]) * 0.4, BTP_HEADQUARTERS[1] + (h.lon - BTP_HEADQUARTERS[1]) * 0.2],
+                [BTP_HEADQUARTERS[0] + (h.lat - BTP_HEADQUARTERS[0]) * 0.7, BTP_HEADQUARTERS[1] + (h.lon - BTP_HEADQUARTERS[1]) * 0.8],
+                [h.lat, h.lon]
+            ];
+
+            // Render route polyline
+            if (activeRoute) map.removeLayer(activeRoute);
+            activeRoute = L.polyline(routeCoords, {
+                color: '#007AFF',
+                weight: 4,
+                opacity: 0.7,
+                dashArray: '10, 10',
+                lineCap: 'round'
+            }).addTo(map);
+
+            // Add moving patrol car marker
+            if (patrolMarker) map.removeLayer(patrolMarker);
+            
+            // Police car icon SVG
+            let carIcon = L.divIcon({
+                className: 'leaflet-div-icon',
+                html: '<div style="font-size: 1.5rem; text-shadow: 0 0 10px #007AFF; animation: carPulse 0.5s infinite;"><i class="fa-solid fa-taxi" style="color: #007AFF;"></i></div>',
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            });
+            patrolMarker = L.marker(BTP_HEADQUARTERS, { icon: carIcon }).addTo(map);
+
+            // Animate progress details
+            const actionArea = document.getElementById('dispatch-action-area');
+            actionArea.innerHTML = `
+                <div class="dispatch-progress-container">
+                    <div class="d-flex justify-content-between">
+                        <span>Warden Unit 04 travelling...</span>
+                        <span id="eta-timer" class="font-monospace">ETA: 4s</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="dispatch-progress-bar"></div>
+                    </div>
+                </div>
+            `;
+
+            // Start route animation
+            let step = 0;
+            const totalSteps = 40;
+            const intervalTime = 100; // Total 4 seconds (40 steps * 100ms)
+
+            dispatchInterval = setInterval(() => {
+                step++;
+                let pct = (step / totalSteps) * 100;
+                
+                // Update progress bar UI
+                const pBar = document.getElementById('dispatch-progress-bar');
+                if (pBar) pBar.style.width = `${pct}%`;
+
+                const etaTimer = document.getElementById('eta-timer');
+                if (etaTimer) etaTimer.innerText = `ETA: ${Math.ceil((totalSteps - step) / 10)}s`;
+
+                // Calculate interpolated coordinate
+                let latIndex = (step / totalSteps);
+                let currentLat = BTP_HEADQUARTERS[0] + (h.lat - BTP_HEADQUARTERS[0]) * latIndex;
+                let currentLon = BTP_HEADQUARTERS[1] + (h.lon - BTP_HEADQUARTERS[1]) * latIndex;
+                patrolMarker.setLatLng([currentLat, currentLon]);
+
+                if (step >= totalSteps) {
+                    clearInterval(dispatchInterval);
+                    arriveAtHotspot(h);
+                }
+            }, intervalTime);
+        }
+
+        // Arrival at Hotspot Action
+        function arriveAtHotspot(h) {
+            pushAlert('success', getFormattedTime(), `WARDEN ONSITE: Unit 04 arrived at ${h.name}. Cleared vehicles, resolving gridlock.`);
+            
+            // Remove route line
+            if (activeRoute) map.removeLayer(activeRoute);
+            
+            // Change car marker to onsite status
+            let onsiteIcon = L.divIcon({
+                className: 'leaflet-div-icon',
+                html: '<div style="font-size: 1.5rem; text-shadow: 0 0 10px #34C759;"><i class="fa-solid fa-shield-halved" style="color: #34C759;"></i></div>',
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            });
+            patrolMarker.setIcon(onsiteIcon);
+
+            // Update details overlay to show enforcement progress
+            const actionArea = document.getElementById('dispatch-action-area');
+            if (actionArea) {
+                actionArea.innerHTML = `
+                    <div class="dispatch-progress-container text-success">
+                        <div class="d-flex justify-content-between font-monospace fw-bold">
+                            <span><i class="fa-solid fa-spinner fa-spin me-1"></i>Enforcement In Progress</span>
+                            <span id="clear-timer">3s</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" style="background:var(--accent-green); width:0%;" id="clear-progress-bar"></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Animate local towing resolution (3 seconds)
+            let step = 0;
+            const totalSteps = 30;
+            const clearTimerInterval = setInterval(() => {
+                step++;
+                let pct = (step / totalSteps) * 100;
+                
+                const pBar = document.getElementById('clear-progress-bar');
+                if (pBar) pBar.style.width = `${pct}%`;
+
+                const cTimer = document.getElementById('clear-timer');
+                if (cTimer) cTimer.innerText = `${Math.ceil((totalSteps - step) / 10)}s`;
+
+                if (step >= totalSteps) {
+                    clearInterval(clearTimerInterval);
+                    resolveHotspot(h);
+                }
+            }, 100);
+        }
+
+        // Final resolution action (decreases PCI and updates map/list)
+        function resolveHotspot(h) {
+            // Remove patrol marker
+            if (patrolMarker) map.removeLayer(patrolMarker);
+            patrolMarker = null;
+
+            // Reduce PCI by 85% (simulating clearing major flow obstruction)
+            let originalPci = h.pci;
+            h.pci = h.pci * 0.15;
+            h.status = 'Resolved';
+            h.priority = 'Low Priority';
+
+            // Log final status
+            pushAlert('info', getFormattedTime(), `HOTSPOT RESOLVED: ${h.name} gridlock cleared. PCI reduced from ${originalPci.toFixed(0)} to ${h.pci.toFixed(0)}.`);
+
+            // Reset dashboard status
+            document.getElementById('stat-active-wardens').innerText = "8 / 12";
+            
+            // Re-render list & map
+            renderHotspotList(hotspots);
+            renderMapMarkers(hotspots);
+            updateStats();
+
+            // Refresh details box
+            selectHotspot(h.id);
+        }
+
+        // Reset simulation back to initial database state
+        function resetSimulation() {
+            if(dispatchInterval) clearInterval(dispatchInterval);
+            if(activeRoute) map.removeLayer(activeRoute);
+            if(patrolMarker) map.removeLayer(patrolMarker);
+            
+            patrolMarker = null;
+            activeRoute = null;
+
+            hotspots = [
+                { id: 1, name: "Majestic Metro Station", jurisdiction: "Upparpet", lat: 12.9756, lon: 77.5728, violations: 51373, pci: 164709.5, priority: "High Priority", vehicle: "SCOOTER", violation_type: "WRONG PARKING", status: "Active" },
+                { id: 2, name: "Shivajinagar Bus Station", jurisdiction: "Shivajinagar", lat: 12.9857, lon: 77.5960, violations: 20046, pci: 51232.6, priority: "High Priority", vehicle: "CAR", violation_type: "NO PARKING", status: "Active" },
+                { id: 3, name: "Rajajinagar Commercial Hub", jurisdiction: "Rajajinagar", lat: 12.9902, lon: 77.5540, violations: 12417, pci: 34453.8, priority: "High Priority", vehicle: "SCOOTER", violation_type: "WRONG PARKING", status: "Active" },
+                { id: 4, name: "Malleshwaram 15th Cross", jurisdiction: "Malleshwaram", lat: 12.9966, lon: 77.5712, violations: 8845, pci: 21943.7, priority: "High Priority", vehicle: "SCOOTER", violation_type: "NO PARKING", status: "Active" },
+                { id: 5, name: "Malleshwaram Metro Junction", jurisdiction: "Malleshwaram", lat: 12.9913, lon: 77.5712, violations: 8761, pci: 18089.2, priority: "High Priority", vehicle: "CAR", violation_type: "WRONG PARKING", status: "Active" },
+                { id: 6, name: "HAL Airport Rd (New Horizon)", jurisdiction: "HAL Old Airport", lat: 12.9610, lon: 77.6418, violations: 8608, pci: 11771.3, priority: "High Priority", vehicle: "CAR", violation_type: "PARKING IN A MAIN ROAD", status: "Active" },
+                { id: 7, name: "Vijayanagara Metro corridor", jurisdiction: "Vijayanagara", lat: 12.9687, lon: 77.5369, violations: 6865, pci: 11620.1, priority: "High Priority", vehicle: "SCOOTER", violation_type: "WRONG PARKING", status: "Active" },
+                { id: 8, name: "Chikkajala Highway Turn", jurisdiction: "Chikkajala", lat: 13.1845, lon: 77.6797, violations: 4045, pci: 10840.8, priority: "High Priority", vehicle: "PASSENGER AUTO", violation_type: "NO PARKING", status: "Active" },
+                { id: 9, name: "Embassy Tech Village Road", jurisdiction: "HAL Old Airport", lat: 12.9365, lon: 77.6923, violations: 3585, pci: 10015.0, priority: "High Priority", vehicle: "CAR", violation_type: "WRONG PARKING", status: "Active" },
+                { id: 10, name: "KR Puram Devasandra Jnc", jurisdiction: "K.R. Pura", lat: 12.9958, lon: 77.7178, violations: 3503, pci: 9530.8, priority: "High Priority", vehicle: "CAR", violation_type: "NO PARKING", status: "Active" },
+                { id: 11, name: "Kodigehalli Signal Crossing", jurisdiction: "Kodigehalli", lat: 13.0715, lon: 77.5919, violations: 5156, pci: 6116.1, priority: "High Priority", vehicle: "PASSENGER AUTO", violation_type: "WRONG PARKING", status: "Active" },
+                { id: 12, name: "Jayanagara Shopping Complex", jurisdiction: "Jayanagara", lat: 12.9421, lon: 77.5905, violations: 1956, pci: 5207.0, priority: "High Priority", vehicle: "SCOOTER", violation_type: "PARKING ON FOOTPATH", status: "Active" },
+                { id: 13, name: "Mahadevapura Outer Ring Rd", jurisdiction: "Mahadevapura", lat: 12.9866, lon: 77.6798, violations: 1543, pci: 5090.6, priority: "High Priority", vehicle: "CAR", violation_type: "NO PARKING", status: "Active" },
+                { id: 14, name: "Basavanagudi Gandhi Bazaar", jurisdiction: "Basavanagudi", lat: 12.9421, lon: 77.5754, violations: 2083, pci: 4790.4, priority: "High Priority", vehicle: "CAR", violation_type: "WRONG PARKING", status: "Active" },
+                { id: 15, name: "Koramangala 80ft Road", jurisdiction: "Koramangala", lat: 12.9352, lon: 77.6244, violations: 1850, pci: 4120.0, priority: "Medium Priority", vehicle: "CAR", violation_type: "WRONG PARKING", status: "Active" },
+                { id: 16, name: "Whitefield IT Corridor", jurisdiction: "Whitefield", lat: 12.9698, lon: 77.7500, violations: 1240, pci: 3250.0, priority: "Medium Priority", vehicle: "CAR", violation_type: "WRONG PARKING", status: "Active" },
+                { id: 17, name: "Electronic City Expressway Entry", jurisdiction: "Electronic City", lat: 12.8452, lon: 77.6602, violations: 980, pci: 2120.0, priority: "Low Priority", vehicle: "CAR", violation_type: "NO PARKING", status: "Active" }
+            ];
+
+            renderHotspotList(hotspots);
+            renderMapMarkers(hotspots);
+            updateStats();
+            initAlertFeed();
+            closeDetailsPanel();
+            map.setView([12.977291, 77.5840233], 12);
+        }
+    </script>
+</body>
+</html>
