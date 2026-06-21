@@ -79,7 +79,18 @@ Analysis of the raw BTP logs containing **298,450 records** (Nov 2023 – Apr 20
    * Watch the patrol unit navigate the streets from BTP HQ, arrive onsite, run towing clearance, and resolve the congestion (reducing the PCI score dynamically on the map and sidebar).
    * Filter the map by jurisdiction or priority using the top-right overlay filters.
 
-### B. Running the Data Pipeline & Notebook
+### B. Map Symbology & Legend Guide
+To assist with evaluation, here is a quick guide to the map's visual symbols:
+* 🔵 **Blue Dot with White Outline** (Downtown Bengaluru): Represents the **BTP Central Dispatch Command (BTP Headquarters)**.
+* **Hotspot Zones** (Color-coded by priority based on cumulative **Parking Congestion Index (PCI)**):
+  * 🔴 **Red Zone**: High Priority (e.g., Majestic Metro Station, Shivajinagar Bus Station)
+  * 🟠 **Orange Zone**: Medium Priority (e.g., Koramangala 80ft Road)
+  * 🔵 **Blue Zone with Outer Ring**: Low Priority (e.g., Electronic City Expressway Entry)
+* 🟢 **Green Zone**: Active enforcement in progress (a patrol unit has been dispatched and is currently clearing the area).
+* 🔵 **Pulsing Blue Status Dot (Bottom-Right)**: Indicates the automated background dispatch simulation engine is active.
+
+### C. Running the Data Pipeline & Notebook
 If you have a Python environment set up with pandas, scikit-learn, matplotlib, seaborn, and folium:
 1. Run `python analyze_dataset.py` to regenerate the plots and statistical markdown report.
 2. Run the notebook `parking_congestion_analysis.ipynb` in VS Code or Jupyter Lab to see the full code execution outputs and view the Folium HTML map.
+
